@@ -4,11 +4,14 @@
   "description": "CLI to install R components from the Roketin component library",
   "type": "module",
   "bin": {
-    "r-component": "./bin/index.js"
+    "r-component": "bin/index.js"
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "keywords": [
     "react",
@@ -17,9 +20,15 @@
     "roketin",
     "ui",
     "shadcn",
-    "tailwind"
+    "tailwind",
+    "component-library",
+    "npx",
+    "typescript"
   ],
-  "author": "Roketin",
+  "author": {
+    "name": "Roketin",
+    "url": "https://roketin.com"
+  },
   "license": "MIT",
   "homepage": "https://github.com/roketin/r-component-cli#readme",
   "bugs": {
@@ -32,10 +41,17 @@
   "engines": {
     "node": ">=18"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "commander": "^12.1.0",
     "prompts": "^2.4.2",
     "picocolors": "^1.1.1",
     "ora": "^8.1.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "echo 'Ready to publish @roketin/r-component'"
   }
 }
