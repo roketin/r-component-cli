@@ -1,6 +1,6 @@
 // Default GitHub raw URL for the component registry
-const DEFAULT_REGISTRY_URL = 'https://raw.githubusercontent.com/roketin/r-component/main/registry.json';
-const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/roketin/r-component/main';
+const DEFAULT_REGISTRY_URL = 'https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry.json';
+const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/roketin/react-base-project/feat/registry';
 
 /**
  * Fetch registry from remote
@@ -61,9 +61,9 @@ export function resolveDependencies(registry, componentName, resolved = new Set(
   // Add this component
   resolved.add(component.name);
 
-  // Resolve component dependencies
-  if (component.componentDependencies) {
-    for (const dep of component.componentDependencies) {
+  // Resolve registry dependencies (other components/libs this component depends on)
+  if (component.registryDependencies) {
+    for (const dep of component.registryDependencies) {
       if (!resolved.has(dep)) {
         resolveDependencies(registry, dep, resolved);
       }
@@ -81,25 +81,48 @@ export function getAllFilesForComponent(registry, componentName) {
   const files = {
     components: [],
     libs: [],
+    ui: [],
     npmDependencies: new Set(),
   };
 
   for (const compName of allComponents) {
     const component = getComponent(registry, compName);
     if (component) {
-      files.components.push(...component.files);
-      if (component.libs) {
-        files.libs.push(...component.libs);
+      // Categorize files based on their type
+      for (const file of component.files) {
+        if (file.type === 'registry:component') {
+          files.components.push(file);
+        } else if (file.type === 'registry:lib') {
+          files.libs.push(file);
+        } else if (file.type === 'registry:ui') {
+          files.ui.push(file);
+        } else {
+          // Default to components if type is unknown
+          files.components.push(file);
+        }
       }
-      if (component.npmDependencies) {
-        component.npmDependencies.forEach((dep) => files.npmDependencies.add(dep));
+      
+      // Collect npm dependencies
+      if (component.dependencies) {
+        component.dependencies.forEach((dep) => files.npmDependencies.add(dep));
       }
     }
   }
 
-  // Deduplicate
-  files.components = [...new Set(files.components)];
-  files.libs = [...new Set(files.libs)];
+  // Deduplicate files by path
+  const dedupeByPath = (arr) => {
+    const seen = new Set();
+    return arr.filter((item) => {
+      const key = item.path;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  files.components = dedupeByPath(files.components);
+  files.libs = dedupeByPath(files.libs);
+  files.ui = dedupeByPath(files.ui);
   files.npmDependencies = [...files.npmDependencies];
 
   return files;

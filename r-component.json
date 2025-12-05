@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry-schema.json",
+  "baseDir": "src/components",
+  "componentsDir": "base",
+  "libsDir": "libs",
+  "typescript": false,
+  "aliases": {
+    "components": "@/components",
+    "libs": "@/libs"
+  },
+  "registry": "https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry.json"
+}

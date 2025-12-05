@@ -4,7 +4,7 @@ import path from 'path';
 export const CONFIG_FILE_NAME = 'r-component.json';
 
 const defaultConfig = {
-  $schema: 'https://raw.githubusercontent.com/roketin/r-component/main/config-schema.json',
+  $schema: 'https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry-schema.json',
   baseDir: 'src/components',
   componentsDir: 'base',
   libsDir: 'libs',
@@ -13,7 +13,7 @@ const defaultConfig = {
     components: '@/components',
     libs: '@/libs',
   },
-  registry: 'https://raw.githubusercontent.com/roketin/r-component/main/registry.json',
+  registry: 'https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry.json',
 };
 
 /**

@@ -89,23 +89,41 @@ export async function addCommand(components, options) {
 
   // Collect all files needed
   const allFiles = {
-    components: new Set(),
-    libs: new Set(),
+    components: [],
+    libs: [],
+    ui: [],
     npmDependencies: new Set(),
   };
 
   for (const compName of validComponents) {
     const files = getAllFilesForComponent(registry, compName);
-    files.components.forEach((f) => allFiles.components.add(f));
-    files.libs.forEach((f) => allFiles.libs.add(f));
+    files.components.forEach((f) => {
+      if (!allFiles.components.find((c) => c.path === f.path)) {
+        allFiles.components.push(f);
+      }
+    });
+    files.libs.forEach((f) => {
+      if (!allFiles.libs.find((l) => l.path === f.path)) {
+        allFiles.libs.push(f);
+      }
+    });
+    files.ui.forEach((f) => {
+      if (!allFiles.ui.find((u) => u.path === f.path)) {
+        allFiles.ui.push(f);
+      }
+    });
     files.npmDependencies.forEach((d) => allFiles.npmDependencies.add(d));
   }
 
   // Show what will be installed
   logger.info(`Components to add: ${highlight(validComponents.join(', '))}`);
   
-  if (allFiles.libs.size > 0) {
-    logger.info(`Required libs: ${dim([...allFiles.libs].join(', '))}`);
+  if (allFiles.libs.length > 0) {
+    logger.info(`Required libs: ${dim(allFiles.libs.map((f) => path.basename(f.path)).join(', '))}`);
+  }
+
+  if (allFiles.ui.length > 0) {
+    logger.info(`Required UI components: ${dim(allFiles.ui.map((f) => path.basename(f.path)).join(', '))}`);
   }
   
   if (allFiles.npmDependencies.size > 0) {
@@ -139,7 +157,7 @@ export async function addCommand(components, options) {
 
   // Install lib files first
   for (const libFile of allFiles.libs) {
-    const targetPath = path.join(cwd, config.baseDir, '..', config.libsDir, path.basename(libFile));
+    const targetPath = path.join(cwd, config.libsDir, path.basename(libFile.path));
     
     if (fileExists(targetPath) && !options.overwrite) {
       stats.skipped++;
@@ -147,7 +165,8 @@ export async function addCommand(components, options) {
     }
 
     try {
-      const content = await fetchFile(libFile, registry.baseUrl);
+      await ensureDir(path.dirname(targetPath));
+      const content = await fetchFile(libFile.path, registry.baseUrl);
       const transformedContent = transformImports(content, config);
       const result = writeFile(targetPath, transformedContent, options.overwrite);
       if (result.written) {
@@ -156,13 +175,13 @@ export async function addCommand(components, options) {
         stats.skipped++;
       }
     } catch (error) {
-      stats.errors.push({ file: libFile, error: error.message });
+      stats.errors.push({ file: libFile.path, error: error.message });
     }
   }
 
   // Install component files
   for (const compFile of allFiles.components) {
-    const targetPath = path.join(cwd, config.baseDir, config.componentsDir, path.basename(compFile));
+    const targetPath = path.join(cwd, config.baseDir, config.componentsDir, path.basename(compFile.path));
     
     if (fileExists(targetPath) && !options.overwrite) {
       stats.skipped++;
@@ -170,7 +189,8 @@ export async function addCommand(components, options) {
     }
 
     try {
-      const content = await fetchFile(compFile, registry.baseUrl);
+      await ensureDir(path.dirname(targetPath));
+      const content = await fetchFile(compFile.path, registry.baseUrl);
       const transformedContent = transformImports(content, config);
       const result = writeFile(targetPath, transformedContent, options.overwrite);
       if (result.written) {
@@ -179,7 +199,31 @@ export async function addCommand(components, options) {
         stats.skipped++;
       }
     } catch (error) {
-      stats.errors.push({ file: compFile, error: error.message });
+      stats.errors.push({ file: compFile.path, error: error.message });
+    }
+  }
+
+  // Install UI files
+  for (const uiFile of allFiles.ui) {
+    const targetPath = path.join(cwd, config.baseDir, 'ui', path.basename(uiFile.path));
+    
+    if (fileExists(targetPath) && !options.overwrite) {
+      stats.skipped++;
+      continue;
+    }
+
+    try {
+      await ensureDir(path.dirname(targetPath));
+      const content = await fetchFile(uiFile.path, registry.baseUrl);
+      const transformedContent = transformImports(content, config);
+      const result = writeFile(targetPath, transformedContent, options.overwrite);
+      if (result.written) {
+        stats.created++;
+      } else {
+        stats.skipped++;
+      }
+    } catch (error) {
+      stats.errors.push({ file: uiFile.path, error: error.message });
     }
   }
 
