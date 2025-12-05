@@ -1,0 +1,41 @@
+{
+  "name": "@roketin/r-component",
+  "version": "1.0.0",
+  "description": "CLI to install R components from the Roketin component library",
+  "type": "module",
+  "bin": {
+    "r-component": "./bin/index.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "keywords": [
+    "react",
+    "components",
+    "cli",
+    "roketin",
+    "ui",
+    "shadcn",
+    "tailwind"
+  ],
+  "author": "Roketin",
+  "license": "MIT",
+  "homepage": "https://github.com/roketin/r-component-cli#readme",
+  "bugs": {
+    "url": "https://github.com/roketin/r-component-cli/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roketin/r-component-cli.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "prompts": "^2.4.2",
+    "picocolors": "^1.1.1",
+    "ora": "^8.1.1"
+  }
+}
