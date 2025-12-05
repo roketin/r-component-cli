@@ -105,7 +105,16 @@ export async function initCommand(options) {
     }
   }
 
-  writeConfig(config, cwd);
+  // Remove schema and registry from consumer config (kept only in CLI defaults)
+  const consumerConfig = {
+    baseDir: config.baseDir,
+    componentsDir: config.componentsDir,
+    libsDir: config.libsDir,
+    typescript: config.typescript,
+    aliases: config.aliases,
+  };
+
+  writeConfig(consumerConfig, cwd);
 
   logger.break();
   logger.success(`Created ${highlight(CONFIG_FILE_NAME)}`);

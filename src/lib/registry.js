@@ -1,9 +1,10 @@
 // Default GitHub raw URL for the component registry
-const DEFAULT_REGISTRY_URL = 'https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry.json';
+const DEFAULT_REGISTRY_URL = 'https://raw.githubusercontent.com/roketin/react-base-project/feat/registry/registry/index.json';
 const DEFAULT_BASE_URL = 'https://raw.githubusercontent.com/roketin/react-base-project/feat/registry';
+const DEFAULT_COMPONENTS_URL = 'https://raw.githubusercontent.com/roketin/react-base-project/feat/registry/registry/components';
 
 /**
- * Fetch registry from remote
+ * Fetch registry index from remote
  */
 export async function fetchRegistry(registryUrl = DEFAULT_REGISTRY_URL) {
   try {
@@ -11,9 +12,32 @@ export async function fetchRegistry(registryUrl = DEFAULT_REGISTRY_URL) {
     if (!response.ok) {
       throw new Error(`Failed to fetch registry: ${response.status}`);
     }
-    return await response.json();
+    const registry = await response.json();
+    
+    // Return registry with baseUrl for fetching individual components
+    return {
+      ...registry,
+      baseUrl: DEFAULT_BASE_URL,
+      componentsUrl: DEFAULT_COMPONENTS_URL,
+    };
   } catch (error) {
     throw new Error(`Failed to fetch registry from ${registryUrl}: ${error.message}`);
+  }
+}
+
+/**
+ * Fetch a single component definition from the registry
+ */
+export async function fetchComponentDefinition(componentName, componentsUrl = DEFAULT_COMPONENTS_URL) {
+  const url = `${componentsUrl}/${componentName}.json`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch component definition: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Failed to fetch component ${componentName}: ${error.message}`);
   }
 }
 
@@ -34,38 +58,68 @@ export async function fetchFile(filePath, baseUrl = DEFAULT_BASE_URL) {
 }
 
 /**
- * Get component definition from registry
+ * Get component info from registry index (basic info only - name)
+ * Registry index now contains arrays of component names as strings
  */
-export function getComponent(registry, componentName) {
-  return registry.components.find(
-    (c) => c.name === componentName || c.name === `r-${componentName}`
+export function getComponentInfo(registry, componentName) {
+  if (!registry.components) return null;
+  
+  // Components in index are now just strings (names)
+  const found = registry.components.find(
+    (name) => name === componentName || name === `r-${componentName}`
   );
+  
+  // Return as object with name property for consistency
+  return found ? { name: found } : null;
 }
 
 /**
- * Get all component names
+ * Get full component definition (fetches from individual component file)
+ */
+export async function getComponent(registry, componentName) {
+  const info = getComponentInfo(registry, componentName);
+  if (!info) return null;
+  
+  try {
+    const definition = await fetchComponentDefinition(info.name, registry.componentsUrl);
+    return definition;
+  } catch (error) {
+    console.error(`Failed to fetch component ${componentName}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Get all component names from registry index
  */
 export function getComponentNames(registry) {
-  return registry.components.map((c) => c.name);
+  if (!registry.components) return [];
+  // Components in index are strings, return as-is
+  return registry.components;
 }
 
 /**
- * Resolve all dependencies for a component (recursive)
+ * Resolve all dependencies for a component (recursive, async)
  */
-export function resolveDependencies(registry, componentName, resolved = new Set()) {
-  const component = getComponent(registry, componentName);
+export async function resolveDependencies(registry, componentName, resolved = new Map()) {
+  // Skip if already resolved
+  if (resolved.has(componentName)) {
+    return resolved;
+  }
+
+  const component = await getComponent(registry, componentName);
   if (!component) {
     return resolved;
   }
 
   // Add this component
-  resolved.add(component.name);
+  resolved.set(component.name, component);
 
   // Resolve registry dependencies (other components/libs this component depends on)
   if (component.registryDependencies) {
     for (const dep of component.registryDependencies) {
       if (!resolved.has(dep)) {
-        resolveDependencies(registry, dep, resolved);
+        await resolveDependencies(registry, dep, resolved);
       }
     }
   }
@@ -76,8 +130,8 @@ export function resolveDependencies(registry, componentName, resolved = new Set(
 /**
  * Get all files needed for a component (including dependencies)
  */
-export function getAllFilesForComponent(registry, componentName) {
-  const allComponents = resolveDependencies(registry, componentName);
+export async function getAllFilesForComponent(registry, componentName) {
+  const allComponents = await resolveDependencies(registry, componentName);
   const files = {
     components: [],
     libs: [],
@@ -85,9 +139,8 @@ export function getAllFilesForComponent(registry, componentName) {
     npmDependencies: new Set(),
   };
 
-  for (const compName of allComponents) {
-    const component = getComponent(registry, compName);
-    if (component) {
+  for (const [compName, component] of allComponents) {
+    if (component && component.files) {
       // Categorize files based on their type
       for (const file of component.files) {
         if (file.type === 'registry:component') {

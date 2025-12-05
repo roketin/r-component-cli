@@ -1,6 +1,6 @@
 import ora from 'ora';
 import { logger, highlight, dim, bold } from '../lib/logger.js';
-import { fetchRegistry, getComponentNames, getComponent } from '../lib/registry.js';
+import { fetchRegistry, getComponentNames } from '../lib/registry.js';
 import { readConfig, configExists } from '../lib/config.js';
 
 export async function listCommand(options) {
@@ -37,14 +37,8 @@ export async function listCommand(options) {
   logger.info(`Available components (${registry.components.length}):`);
   logger.break();
 
-  for (const component of registry.components) {
-    const deps = component.componentDependencies?.length
-      ? dim(` → depends on: ${component.componentDependencies.join(', ')}`)
-      : '';
-    console.log(`  ${highlight(component.name)}${deps}`);
-    if (component.description) {
-      console.log(`    ${dim(component.description)}`);
-    }
+  for (const componentName of registry.components) {
+    console.log(`  ${highlight(componentName)}`);
   }
 
   logger.break();

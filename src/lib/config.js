@@ -2,9 +2,12 @@ import fs from 'fs';
 import path from 'path';
 
 export const CONFIG_FILE_NAME = 'r-component.json';
+const BRANCH = 'feat/registry';
+
+const DEFAULT_GITHUB_RAW_URL = `https://raw.githubusercontent.com/roketin/react-base-project/${BRANCH}`;
 
 const defaultConfig = {
-  $schema: 'https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry-schema.json',
+  $schema: `${DEFAULT_GITHUB_RAW_URL}/registry/schema.json`,
   baseDir: 'src/components',
   componentsDir: 'base',
   libsDir: 'libs',
@@ -13,7 +16,8 @@ const defaultConfig = {
     components: '@/components',
     libs: '@/libs',
   },
-  registry: 'https://raw.githubusercontent.com/roketin/react-base-project/refs/heads/feat/registry/registry/registry.json',
+  registry: `${DEFAULT_GITHUB_RAW_URL}/registry/index.json`,
+  registryComponents: `${DEFAULT_GITHUB_RAW_URL}/registry/components`,
 };
 
 /**
@@ -39,7 +43,9 @@ export function readConfig(cwd = process.cwd()) {
     return null;
   }
   const content = fs.readFileSync(configPath, 'utf-8');
-  return JSON.parse(content);
+  const userConfig = JSON.parse(content);
+
+  return { ...defaultConfig, ...userConfig };
 }
 
 /**

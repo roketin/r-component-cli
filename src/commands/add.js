@@ -7,7 +7,7 @@ import { writeFile, fileExists, ensureDir } from '../lib/fs-utils.js';
 import { 
   fetchRegistry, 
   fetchFile, 
-  getComponent, 
+  getComponentInfo,
   getComponentNames,
   getAllFilesForComponent 
 } from '../lib/registry.js';
@@ -52,10 +52,7 @@ export async function addCommand(components, options) {
       type: 'multiselect',
       name: 'selected',
       message: 'Select components to add:',
-      choices: availableComponents.map((name) => ({
-        title: name,
-        value: name,
-      })),
+      choices: availableComponents.map((name) => (name)),
       hint: '- Space to select, Enter to confirm',
     });
 
@@ -66,13 +63,13 @@ export async function addCommand(components, options) {
     componentsToAdd = selected;
   }
 
-  // Validate components
+  // Validate components exist in registry index
   const validComponents = [];
   const invalidComponents = [];
   for (const comp of componentsToAdd) {
-    const component = getComponent(registry, comp);
-    if (component) {
-      validComponents.push(component.name);
+    const componentInfo = getComponentInfo(registry, comp);
+    if (componentInfo) {
+      validComponents.push(componentInfo.name);
     } else {
       invalidComponents.push(comp);
     }
@@ -88,6 +85,8 @@ export async function addCommand(components, options) {
   }
 
   // Collect all files needed
+  const collectSpinner = ora('Resolving dependencies...').start();
+  
   const allFiles = {
     components: [],
     libs: [],
@@ -95,24 +94,31 @@ export async function addCommand(components, options) {
     npmDependencies: new Set(),
   };
 
-  for (const compName of validComponents) {
-    const files = getAllFilesForComponent(registry, compName);
-    files.components.forEach((f) => {
-      if (!allFiles.components.find((c) => c.path === f.path)) {
-        allFiles.components.push(f);
-      }
-    });
-    files.libs.forEach((f) => {
-      if (!allFiles.libs.find((l) => l.path === f.path)) {
-        allFiles.libs.push(f);
-      }
-    });
-    files.ui.forEach((f) => {
-      if (!allFiles.ui.find((u) => u.path === f.path)) {
-        allFiles.ui.push(f);
-      }
-    });
-    files.npmDependencies.forEach((d) => allFiles.npmDependencies.add(d));
+  try {
+    for (const compName of validComponents) {
+      const files = await getAllFilesForComponent(registry, compName);
+      files.components.forEach((f) => {
+        if (!allFiles.components.find((c) => c.path === f.path)) {
+          allFiles.components.push(f);
+        }
+      });
+      files.libs.forEach((f) => {
+        if (!allFiles.libs.find((l) => l.path === f.path)) {
+          allFiles.libs.push(f);
+        }
+      });
+      files.ui.forEach((f) => {
+        if (!allFiles.ui.find((u) => u.path === f.path)) {
+          allFiles.ui.push(f);
+        }
+      });
+      files.npmDependencies.forEach((d) => allFiles.npmDependencies.add(d));
+    }
+    collectSpinner.succeed('Dependencies resolved');
+  } catch (error) {
+    collectSpinner.fail('Failed to resolve dependencies');
+    logger.error(error.message);
+    return;
   }
 
   // Show what will be installed
